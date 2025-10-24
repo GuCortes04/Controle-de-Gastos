@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Sistema de Controle de Gastos{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="jumbotron bg-light p-5 rounded-3 mb-4">
+            <h1 class="display-4">Sistema Web de Controle de Gastos Pessoais</h1>
+            <p class="lead">Controle suas receitas e despesas com previsão inteligente de gastos futuros.</p>
+            <hr class="my-4">
+            <p>Gerencie suas finanças pessoais de forma simples e inteligente com nosso sistema completo.</p>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-start">
+                <a class="btn btn-primary btn-lg me-md-2" href="{{ url_for('dashboard') }}" role="button">
+                    <i class="bi bi-graph-up"></i> Ver Dashboard
+                </a>
+                <a class="btn btn-outline-secondary btn-lg" href="{{ url_for('transacoes') }}" role="button">
+                    <i class="bi bi-plus-circle"></i> Nova Transação
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-wallet2 text-primary" style="font-size: 3rem;"></i>
+                <h5 class="card-title mt-3">Gerenciamento Completo</h5>
+                <p class="card-text">CRUD completo para receitas e despesas com categorização automática.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-graph-up text-success" style="font-size: 3rem;"></i>
+                <h5 class="card-title mt-3">Dashboard Inteligente</h5>
+                <p class="card-text">Gráficos e relatórios financeiros para acompanhar seus gastos.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-body text-center">
+                <i class="bi bi-brain text-warning" style="font-size: 3rem;"></i>
+                <h5 class="card-title mt-3">Previsão de Gastos</h5>
+                <p class="card-text">Inteligência artificial para prever seus gastos futuros.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-5">
+    <div class="col-12">
+        <h3>Resumo Rápido</h3>
+        <div class="row" id="resumo-cards">
+            <!-- Cards de resumo serão carregados aqui via JavaScript -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Carregar resumo rápido
+async function carregarResumo() {
+    try {
+        const response = await fetch('/api/dashboard/resumo');
+        const data = await response.json();
+        
+        const resumoCards = document.getElementById('resumo-cards');
+        resumoCards.innerHTML = `
+            <div class="col-md-4 mb-3">
+                <div class="card text-white bg-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">Receitas do Mês</h6>
+                                <h4>R$ ${data.receitas_mes.toFixed(2)}</h4>
+                            </div>
+                            <i class="bi bi-arrow-up-circle" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card text-white bg-danger">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">Despesas do Mês</h6>
+                                <h4>R$ ${data.despesas_mes.toFixed(2)}</h4>
+                            </div>
+                            <i class="bi bi-arrow-down-circle" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card text-white ${data.saldo_mes >= 0 ? 'bg-primary' : 'bg-warning'}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <h6 class="card-title">Saldo do Mês</h6>
+                                <h4>R$ ${data.saldo_mes.toFixed(2)}</h4>
+                            </div>
+                            <i class="bi bi-wallet" style="font-size: 2rem;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } catch (error) {
+        console.error('Erro ao carregar resumo:', error);
+    }
+}
+
+// Carregar dados ao carregar a página
+document.addEventListener('DOMContentLoaded', carregarResumo);
+</script>
+{% endblock %}

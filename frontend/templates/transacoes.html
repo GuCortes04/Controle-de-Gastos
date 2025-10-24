@@ -1,0 +1,357 @@
+{% extends "base.html" %}
+
+{% block title %}Transações - Controle de Gastos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-list-ul"></i> Gerenciar Transações</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalTransacao">
+        <i class="bi bi-plus-circle"></i> Nova Transação
+    </button>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="card-title">Filtros</h5>
+        <div class="row">
+            <div class="col-md-3">
+                <label for="filtroTipo" class="form-label">Tipo</label>
+                <select class="form-select" id="filtroTipo" onchange="aplicarFiltros()">
+                    <option value="">Todos</option>
+                    <option value="receita">Receitas</option>
+                    <option value="despesa">Despesas</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="filtroCategoria" class="form-label">Categoria</label>
+                <select class="form-select" id="filtroCategoria" onchange="aplicarFiltros()">
+                    <option value="">Todas</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label for="filtroDataInicio" class="form-label">Data Início</label>
+                <input type="date" class="form-control" id="filtroDataInicio" onchange="aplicarFiltros()">
+            </div>
+            <div class="col-md-3">
+                <label for="filtroDataFim" class="form-label">Data Fim</label>
+                <input type="date" class="form-control" id="filtroDataFim" onchange="aplicarFiltros()">
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Descrição</th>
+                        <th>Categoria</th>
+                        <th>Tipo</th>
+                        <th>Valor</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-transacoes">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalTransacao" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Nova Transação</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formTransacao">
+                    <input type="hidden" id="transacaoId">
+                    
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">Descrição</label>
+                        <input type="text" class="form-control" id="descricao" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="valor" class="form-label">Valor</label>
+                        <input type="number" class="form-control" id="valor" step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="data" class="form-label">Data</label>
+                        <input type="date" class="form-control" id="data" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="tipo" class="form-label">Tipo</label>
+                        <select class="form-select" id="tipo" required>
+                            <option value="">Selecione o tipo</option>
+                            <option value="receita">Receita</option>
+                            <option value="despesa">Despesa</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="salvarTransacao()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal fade" id="modalExcluir" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Exclusão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir esta transação?</p>
+                <p><strong id="transacaoParaExcluir"></strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="confirmarExclusao()">Excluir</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let transacoes = [];
+let categorias = [];
+let transacaoParaExcluir = null;
+
+// Inicializar página
+document.addEventListener('DOMContentLoaded', function() {
+    carregarCategorias();
+    carregarTransacoes();
+    
+    // Definir data padrão como hoje
+    document.getElementById('data').value = new Date().toISOString().split('T')[0];
+});
+
+async function carregarCategorias() {
+    try {
+        const response = await fetch('/api/categorias');
+        categorias = await response.json();
+        
+        const selectCategoria = document.getElementById('filtroCategoria');
+        selectCategoria.innerHTML = '<option value="">Todas</option>';
+        
+        categorias.forEach(categoria => {
+            selectCategoria.innerHTML += `<option value="${categoria.nome}">${categoria.nome}</option>`;
+        });
+    } catch (error) {
+        console.error('Erro ao carregar categorias:', error);
+    }
+}
+
+async function carregarTransacoes() {
+    try {
+        const response = await fetch('/api/transacoes');
+        transacoes = await response.json();
+        exibirTransacoes(transacoes);
+    } catch (error) {
+        console.error('Erro ao carregar transações:', error);
+        mostrarErro('Erro ao carregar transações');
+    }
+}
+
+function exibirTransacoes(transacoesParaExibir) {
+    const tabela = document.getElementById('tabela-transacoes');
+    
+    if (transacoesParaExibir.length === 0) {
+        tabela.innerHTML = '<tr><td colspan="6" class="text-center">Nenhuma transação encontrada</td></tr>';
+        return;
+    }
+    
+    tabela.innerHTML = transacoesParaExibir.map(transacao => `
+        <tr>
+            <td>${formatarData(transacao.data)}</td>
+            <td>${transacao.descricao}</td>
+            <td>${transacao.categoria ? transacao.categoria.nome : 'Sem categoria'}</td>
+            <td>
+                <span class="badge bg-${transacao.tipo === 'receita' ? 'success' : 'danger'}">
+                    ${transacao.tipo.charAt(0).toUpperCase() + transacao.tipo.slice(1)}
+                </span>
+            </td>
+            <td class="text-${transacao.tipo === 'receita' ? 'success' : 'danger'}">
+                ${transacao.tipo === 'receita' ? '+' : '-'}R$ ${transacao.valor.toFixed(2)}
+            </td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary" onclick="editarTransacao(${transacao.id})">
+                    <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger ms-1" onclick="excluirTransacao(${transacao.id})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function aplicarFiltros() {
+    const filtroTipo = document.getElementById('filtroTipo').value;
+    const filtroCategoria = document.getElementById('filtroCategoria').value;
+    const filtroDataInicio = document.getElementById('filtroDataInicio').value;
+    const filtroDataFim = document.getElementById('filtroDataFim').value;
+    
+    let transacoesFiltradas = transacoes;
+    
+    if (filtroTipo) {
+        transacoesFiltradas = transacoesFiltradas.filter(t => t.tipo === filtroTipo);
+    }
+    
+    if (filtroCategoria) {
+        transacoesFiltradas = transacoesFiltradas.filter(t => 
+            t.categoria && t.categoria.nome === filtroCategoria
+        );
+    }
+    
+    if (filtroDataInicio) {
+        transacoesFiltradas = transacoesFiltradas.filter(t => t.data >= filtroDataInicio);
+    }
+    
+    if (filtroDataFim) {
+        transacoesFiltradas = transacoesFiltradas.filter(t => t.data <= filtroDataFim);
+    }
+    
+    exibirTransacoes(transacoesFiltradas);
+}
+
+function novaTransacao() {
+    document.getElementById('modalTitle').textContent = 'Nova Transação';
+    document.getElementById('formTransacao').reset();
+    document.getElementById('transacaoId').value = '';
+    document.getElementById('data').value = new Date().toISOString().split('T')[0];
+}
+
+function editarTransacao(id) {
+    const transacao = transacoes.find(t => t.id === id);
+    if (!transacao) return;
+    
+    document.getElementById('modalTitle').textContent = 'Editar Transação';
+    document.getElementById('transacaoId').value = transacao.id;
+    document.getElementById('descricao').value = transacao.descricao;
+    document.getElementById('valor').value = transacao.valor;
+    document.getElementById('data').value = transacao.data;
+    document.getElementById('tipo').value = transacao.tipo;
+    
+    new bootstrap.Modal(document.getElementById('modalTransacao')).show();
+}
+
+async function salvarTransacao() {
+    const form = document.getElementById('formTransacao');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    const transacaoId = document.getElementById('transacaoId').value;
+    const dadosTransacao = {
+        descricao: document.getElementById('descricao').value,
+        valor: parseFloat(document.getElementById('valor').value),
+        data: document.getElementById('data').value,
+        tipo: document.getElementById('tipo').value
+    };
+    
+    try {
+        let response;
+        if (transacaoId) {
+            // Editar
+            response = await fetch(`/api/transacoes/${transacaoId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(dadosTransacao)
+            });
+        } else {
+            // Criar
+            response = await fetch('/api/transacoes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(dadosTransacao)
+            });
+        }
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('modalTransacao')).hide();
+            await carregarTransacoes();
+            mostrarSucesso(transacaoId ? 'Transação atualizada com sucesso!' : 'Transação criada com sucesso!');
+        } else {
+            throw new Error('Erro ao salvar transação');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar transação:', error);
+        mostrarErro('Erro ao salvar transação');
+    }
+}
+
+function excluirTransacao(id) {
+    const transacao = transacoes.find(t => t.id === id);
+    if (!transacao) return;
+    
+    transacaoParaExcluir = id;
+    document.getElementById('transacaoParaExcluir').textContent = 
+        `${transacao.descricao} - R$ ${transacao.valor.toFixed(2)}`;
+    
+    new bootstrap.Modal(document.getElementById('modalExcluir')).show();
+}
+
+async function confirmarExclusao() {
+    if (!transacaoParaExcluir) return;
+    
+    try {
+        const response = await fetch(`/api/transacoes/${transacaoParaExcluir}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('modalExcluir')).hide();
+            await carregarTransacoes();
+            mostrarSucesso('Transação excluída com sucesso!');
+        } else {
+            throw new Error('Erro ao excluir transação');
+        }
+    } catch (error) {
+        console.error('Erro ao excluir transação:', error);
+        mostrarErro('Erro ao excluir transação');
+    }
+    
+    transacaoParaExcluir = null;
+}
+
+function formatarData(data) {
+    return new Date(data + 'T00:00:00').toLocaleDateString('pt-BR');
+}
+
+function mostrarSucesso(mensagem) {
+    // Implementar toast de sucesso
+    alert(mensagem);
+}
+
+function mostrarErro(mensagem) {
+    // Implementar toast de erro
+    alert(mensagem);
+}
+
+// Resetar modal ao fechar
+document.getElementById('modalTransacao').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('formTransacao').reset();
+});
+</script>
+{% endblock %}
