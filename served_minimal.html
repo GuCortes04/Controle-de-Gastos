@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Controle de Gastos Pessoais</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .monospace { font-family: monospace; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-4">
+        <h1 class="text-center">💰 Controle de Gastos Pessoais</h1>
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card p-3">
+                    <h5>Resumo Financeiro</h5>
+                    <p><strong>Receitas:</strong> R$ 10000.0</p>
+                    <p><strong>Despesas:</strong> R$ 180.0</p>
+                    <p><strong>Saldo:</strong> R$ 9820.0</p>
+                    <a href="/previsao" class="btn btn-warning btn-sm">🔮 Ver previsão de gastos</a>
+                </div>
+
+                <div class="card p-3 mt-3">
+                    <h5>Nova Transação</h5>
+                    <form method="POST" action="/adicionar">
+                        <div class="mb-2">
+                            <select name="tipo" class="form-select form-select-sm" required>
+                                <option value="Receita">Receita</option>
+                                <option value="Despesa">Despesa</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" name="categoria" class="form-control form-control-sm" placeholder="Categoria (opcional - deixe vazio para auto)">
+                        </div>
+                        <div class="mb-2 row">
+                            <div class="col-6">
+                                <input type="number" name="valor" class="form-control form-control-sm" step="0.01" placeholder="Valor" required>
+                            </div>
+                            <div class="col-6">
+                                <input type="date" name="data" class="form-control form-control-sm" required>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" name="descricao" class="form-control form-control-sm" placeholder="Descrição">
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-success btn-sm">Adicionar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card p-3">
+                    <h5>Gráfico de Despesas Mensais</h5>
+                    <div id="graficoContainer" style="min-height:220px;">
+                        <canvas id="despesasChart" width="400" height="180"></canvas>
+                        <div id="graficoMensagem" class="text-center text-muted mt-2" style="display:none;">Nenhuma despesa para mostrar.</div>
+                    </div>
+                    <div class="mt-2">
+                        <form method="POST" action="/inserir_exemplo" class="d-inline">
+                            <button class="btn btn-sm btn-outline-primary">Inserir dados de exemplo</button>
+                        </form>
+                        <a href="/debug_stats" class="btn btn-sm btn-outline-secondary ms-2">Ver debug (JSON)</a>
+                    </div>
+                </div>
+
+                <div class="card p-3 mt-3">
+                    <h5>Transações</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Categoria</th>
+                                    <th class="text-end">Valor</th>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                
+                                    
+                                    <tr>
+                                        <td>Receita</td>
+                                        <td>Salario</td>
+                                        <td class="text-end">R$ 10000.0</td>
+                                        <td>05/11/2025</td>
+                                        <td></td>
+                                        <td>
+                                            <a href="/excluir/1" class="btn btn-danger btn-sm">Excluir</a>
+                                        </td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td>Despesa</td>
+                                        <td>Internet</td>
+                                        <td class="text-end">R$ 180.0</td>
+                                        <td>05/11/2025</td>
+                                        <td>Paga</td>
+                                        <td>
+                                            <a href="/excluir/2" class="btn btn-danger btn-sm">Excluir</a>
+                                        </td>
+                                    </tr>
+                                    
+                                
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    async function carregarGrafico(){
+        try{
+            const res = await fetch('/dados_despesas');
+            const data = await res.json();
+            if(!data || !data.meses || data.meses.length === 0){
+                document.getElementById('despesasChart').style.display = 'none';
+                document.getElementById('graficoMensagem').style.display = 'block';
+                return;
+            }
+            const ctx = document.getElementById('despesasChart').getContext('2d');
+            document.getElementById('despesasChart').style.display = 'block';
+            document.getElementById('graficoMensagem').style.display = 'none';
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.meses,
+                    datasets: [{
+                        label: 'Despesas (R$)',
+                        data: data.valores,
+                        backgroundColor: 'rgba(255,99,132,0.2)',
+                        borderColor: 'rgba(255,99,132,1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }catch(e){
+            console.error('Erro ao carregar gráfico', e);
+            document.getElementById('despesasChart').style.display = 'none';
+            document.getElementById('graficoMensagem').style.display = 'block';
+            document.getElementById('graficoMensagem').textContent = 'Erro ao carregar dados do gráfico.';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', carregarGrafico);
+
+    </script>
+    </body>
+</html>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>Controle de Gastos Pessoais</title>
+</head>
+<body>
+  <h1>💰 Controle de Gastos Pessoais</h1>
+  <p>Teste de duplicação — somente uma cópia deste arquivo deve aparecer.</p>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Controle de Gastos Pessoais</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .monospace { font-family: monospace; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-4">
+        <h1 class="text-center">💰 Controle de Gastos Pessoais</h1>
+
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card p-3">
+                    <h5>Resumo Financeiro</h5>
+                    <p><strong>Receitas:</strong> R$ 10000.0</p>
+                    <p><strong>Despesas:</strong> R$ 180.0</p>
+                    <p><strong>Saldo:</strong> R$ 9820.0</p>
+                    <a href="/previsao" class="btn btn-warning btn-sm">🔮 Ver previsão de gastos</a>
+                </div>
+
+                <div class="card p-3 mt-3">
+                    <h5>Nova Transação</h5>
+                    <form method="POST" action="/adicionar">
+                        <div class="mb-2">
+                            <select name="tipo" class="form-select form-select-sm" required>
+                                <option value="Receita">Receita</option>
+                                <option value="Despesa">Despesa</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" name="categoria" class="form-control form-control-sm" placeholder="Categoria (opcional - deixe vazio para auto)">
+                        </div>
+                        <div class="mb-2 row">
+                            <div class="col-6">
+                                <input type="number" name="valor" class="form-control form-control-sm" step="0.01" placeholder="Valor" required>
+                            </div>
+                            <div class="col-6">
+                                <input type="date" name="data" class="form-control form-control-sm" required>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" name="descricao" class="form-control form-control-sm" placeholder="Descrição">
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-success btn-sm">Adicionar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card p-3">
+                    <h5>Gráfico de Despesas Mensais</h5>
+                    <div id="graficoContainer" style="min-height:220px;">
+                        <canvas id="despesasChart" width="400" height="180"></canvas>
+                        <div id="graficoMensagem" class="text-center text-muted mt-2" style="display:none;">Nenhuma despesa para mostrar.</div>
+                    </div>
+                    <div class="mt-2">
+                        <form method="POST" action="/inserir_exemplo" class="d-inline">
+                            <button class="btn btn-sm btn-outline-primary">Inserir dados de exemplo</button>
+                        </form>
+                        <a href="/debug_stats" class="btn btn-sm btn-outline-secondary ms-2">Ver debug (JSON)</a>
+                    </div>
+                </div>
+
+                <div class="card p-3 mt-3">
+                    <h5>Transações</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Categoria</th>
+                                    <th class="text-end">Valor</th>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                
+                                    
+                                    <tr>
+                                        <td>Receita</td>
+                                        <td>Salario</td>
+                                        <td class="text-end">R$ 10000.0</td>
+                                        <td>05/11/2025</td>
+                                        <td></td>
+                                        <td>
+                                            <a href="/excluir/1" class="btn btn-danger btn-sm">Excluir</a>
+                                        </td>
+                                    </tr>
+                                    
+                                    <tr>
+                                        <td>Despesa</td>
+                                        <td>Internet</td>
+                                        <td class="text-end">R$ 180.0</td>
+                                        <td>05/11/2025</td>
+                                        <td>Paga</td>
+                                        <td>
+                                            <a href="/excluir/2" class="btn btn-danger btn-sm">Excluir</a>
+                                        </td>
+                                    </tr>
+                                    
+                                
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    async function carregarGrafico(){
+        try{
+            const res = await fetch('/dados_despesas');
+            const data = await res.json();
+            if(!data || !data.meses || data.meses.length === 0){
+                document.getElementById('despesasChart').style.display = 'none';
+                document.getElementById('graficoMensagem').style.display = 'block';
+                return;
+            }
+            const ctx = document.getElementById('despesasChart').getContext('2d');
+            document.getElementById('despesasChart').style.display = 'block';
+            document.getElementById('graficoMensagem').style.display = 'none';
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.meses,
+                    datasets: [{
+                        label: 'Despesas (R$)',
+                        data: data.valores,
+                        backgroundColor: 'rgba(255,99,132,0.2)',
+                        borderColor: 'rgba(255,99,132,1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+        }catch(e){
+            console.error('Erro ao carregar gráfico', e);
+            document.getElementById('despesasChart').style.display = 'none';
+            document.getElementById('graficoMensagem').style.display = 'block';
+            document.getElementById('graficoMensagem').textContent = 'Erro ao carregar dados do gráfico.';
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', carregarGrafico);
+    </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Controle de Gastos Pessoais</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .monospace { font-family: monospace; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-4">
+        <h1 class="text-center">💰 Controle de Gastos Pessoais</h1>
+
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card p-3">
+                    <h5>Resumo Financeiro</h5>
+                    <p><strong>Receitas:</strong> R$ 10000.00</p>
+                    <p><strong>Despesas:</strong> R$ 180.00</p>
+                    <p><strong>Saldo:</strong> R$ 9820.00</p>
+                        <!DOCTYPE html>
+                        <html lang="pt-br">
+                        <head>
+                            <meta charset="UTF-8">
+                            <meta name="viewport" content="width=device-width, initial-scale=1">
+                            <title>Controle de Gastos Pessoais</title>
+                            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+                            <style>
+                                .monospace { font-family: monospace; }
+                            </style>
+                        </head>
+                        <body class="bg-light">
+                            <div class="container mt-4">
+                                <h1 class="text-center">💰 Controle de Gastos Pessoais</h1>
+
+                                <div class="row mt-4">
+                                    <div class="col-md-4">
+                                        <div class="card p-3">
+                                            <h5>Resumo Financeiro</h5>
+                                            <p><strong>Receitas:</strong> R$ 10000.0</p>
+                                            <p><strong>Despesas:</strong> R$ 180.0</p>
+                                            <p><strong>Saldo:</strong> R$ 9820.0</p>
+                                            <a href="/previsao" class="btn btn-warning btn-sm">🔮 Ver previsão de gastos</a>
+                                        </div>
+
+                                        <div class="card p-3 mt-3">
+                                            <h5>Nova Transação</h5>
+                                            <form method="POST" action="/adicionar">
+                                                <div class="mb-2">
+                                                    <select name="tipo" class="form-select form-select-sm" required>
+                                                        <option value="Receita">Receita</option>
+                                                        <option value="Despesa">Despesa</option>
+                                                    </select>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <input type="text" name="categoria" class="form-control form-control-sm" placeholder="Categoria (opcional - deixe vazio para auto)">
+                                                </div>
+                                                <div class="mb-2 row">
+                                                    <div class="col-6">
+                                                        <input type="number" name="valor" class="form-control form-control-sm" step="0.01" placeholder="Valor" required>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <input type="date" name="data" class="form-control form-control-sm" required>
+                                                    </div>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <input type="text" name="descricao" class="form-control form-control-sm" placeholder="Descrição">
+                                                </div>
+                                                <div class="text-end">
+                                                    <button type="submit" class="btn btn-success btn-sm">Adicionar</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-8">
+                                        <div class="card p-3">
+                                            <h5>Gráfico de Despesas Mensais</h5>
+                                            <div id="graficoContainer">
+                                                <canvas id="despesasChart" width="400" height="180"></canvas>
+                                                <div id="graficoMensagem" class="text-center text-muted mt-2" style="display:none;">Nenhuma despesa para mostrar.</div>
+                                            </div>
+                                            <div class="mt-2">
+                                                <form method="POST" action="/inserir_exemplo" class="d-inline">
+                                                    <button class="btn btn-sm btn-outline-primary">Inserir dados de exemplo</button>
+                                                </form>
+                                                <a href="/debug_stats" class="btn btn-sm btn-outline-secondary ms-2">Ver debug (JSON)</a>
+                                            </div>
+                                        </div>
+
+                                        <div class="card p-3 mt-3">
+                                            <h5>Transações</h5>
+                                            <div class="table-responsive">
+                                                <table class="table table-striped table-sm align-middle mb-0">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Tipo</th>
+                                                            <th>Categoria</th>
+                                                            <th class="text-end">Valor</th>
+                                                            <th>Data</th>
+                                                            <th>Descrição</th>
+                                                            <th>Ações</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        
+                                                            
+                                                            <tr>
+                                                                <td>Receita</td>
+                                                                <td>Salario</td>
+                                                                <td class="text-end">R$ 10000.0</td>
+                                                                <td>05/11/2025</td>
+                                                                <td></td>
+                                                                <td>
+                                                                    <a href="/excluir/1" class="btn btn-danger btn-sm">Excluir</a>
+                                                                </td>
+                                                            </tr>
+                                                            
+                                                            <tr>
+                                                                <td>Despesa</td>
+                                                                <td>Internet</td>
+                                                                <td class="text-end">R$ 180.0</td>
+                                                                <td>05/11/2025</td>
+                                                                <td>Paga</td>
+                                                                <td>
+                                                                    <a href="/excluir/2" class="btn btn-danger btn-sm">Excluir</a>
+                                                                </td>
+                                                            </tr>
+                                                            
+                                                        
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                            <script>
+                            async function carregarGrafico(){
+                                try{
+                                    const res = await fetch('/dados_despesas');
+                                    const data = await res.json();
+                                    if(!data || !data.meses || data.meses.length === 0){
+                                        document.getElementById('despesasChart').style.display = 'none';
+                                        document.getElementById('graficoMensagem').style.display = 'block';
+                                        return;
+                                    }
+                                    const ctx = document.getElementById('despesasChart').getContext('2d');
+                                    document.getElementById('despesasChart').style.display = 'block';
+                                    document.getElementById('graficoMensagem').style.display = 'none';
+                                    new Chart(ctx, {
+                                        type: 'bar',
+                                        data: {
+                                            labels: data.meses,
+                                            datasets: [{
+                                                label: 'Despesas (R$)',
+                                                data: data.valores,
+                                                backgroundColor: 'rgba(255,99,132,0.2)',
+                                                borderColor: 'rgba(255,99,132,1)',
+                                                borderWidth: 1
+                                            }]
+                                        },
+                                        options: {
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            scales: {
+                                                y: { beginAtZero: true }
+                                            }
+                                        }
+                                    });
+                                }catch(e){
+                                    console.error('Erro ao carregar gráfico', e);
+                                    document.getElementById('despesasChart').style.display = 'none';
+                                    document.getElementById('graficoMensagem').style.display = 'block';
+                                    document.getElementById('graficoMensagem').textContent = 'Erro ao carregar dados do gráfico.';
+                                }
+                            }
+
+                            document.addEventListener('DOMContentLoaded', carregarGrafico);
+                            </script>
+                        </body>
+                        </html>
+                                    label: 'Despesas (R$)',
+                                    data: data.valores,
+                                    backgroundColor: 'rgba(255,99,132,0.2)',
+                                    borderColor: 'rgba(255,99,132,1)',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: {
+                                    y: { beginAtZero: true }
+                                }
+                            }
+                        });
+                    }catch(e){
+                        console.error('Erro ao carregar gráfico', e);
+                        document.getElementById('despesasChart').style.display = 'none';
+                        document.getElementById('graficoMensagem').style.display = 'block';
+                        document.getElementById('graficoMensagem').textContent = 'Erro ao carregar dados do gráfico.';
+                    }
+                }
+
+                document.addEventListener('DOMContentLoaded', carregarGrafico);
+                </script>
+            </body>
+            </html>
