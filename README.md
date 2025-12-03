@@ -359,7 +359,7 @@ O sistema automaticamente categoriza novas transações baseado em:
 ### Contato
 - **Desenvolvedor:** Gustavo Cortes de Oliveira
 - **Instituição:** Universidade Nove de Julho (Uni9)
-- **Email:** [seu-email@uni9.edu.br]
+- **Email:** [gustavocortes@uni9.edu.br]
 
 ### Issues Conhecidos
 - Previsão requer mínimo 4 meses de dados
