@@ -5,7 +5,7 @@
 **Nome:** Sistema Web de Controle de Gastos Pessoais com Previsão Inteligente de Despesas  
 **Autor:** Gustavo Cortes de Oliveira  
 **Instituição:** Universidade Nove de Julho (Uni9)  
-**Período:** 3 meses  
+**Período:** 6 meses  
 **Metodologia:** Ágil (Scrum/Kanban)  
 
 ## 🎯 Objetivos
