@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Controle de Gastos Pessoais</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .monospace { font-family: monospace; }
+        body { background-color: #f8f9fa; }
+        .card { box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075); }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">💰 Controle de Gastos Pessoais</h1>
+        <p class="text-center text-muted small">
+            <strong>Demo Estática</strong> | Para versão completa com backend, execute localmente: <code>python app.py</code>
+        </p>
+
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card p-3">
+                    <h5>Resumo Financeiro</h5>
+                    <p><strong>Receitas:</strong> <span class="counter" data-value="2000">R$ 2.000,00</span></p>
+                    <p><strong>Despesas:</strong> <span class="counter" data-value="650">R$ 650,00</span></p>
+                    <p><strong>Saldo:</strong> <span class="counter" data-value="1350" style="color: #28a745;">R$ 1.350,00</span></p>
+                </div>
+
+                <div class="card p-3 mt-3">
+                    <h5>Nova Transação</h5>
+                    <div class="alert alert-info small">
+                        💡 <strong>Nota:</strong> Esta é uma demo estática. Para adicionar transações, execute o projeto localmente ou acesse o backend em produção.
+                    </div>
+                    <form id="demoForm">
+                        <div class="mb-2">
+                            <select id="tipo" class="form-select form-select-sm" required>
+                                <option value="Receita">Receita</option>
+                                <option value="Despesa">Despesa</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" id="categoria" class="form-control form-control-sm" placeholder="Categoria" value="Exemplo">
+                        </div>
+                        <div class="mb-2 row">
+                            <div class="col-6">
+                                <input type="number" id="valor" class="form-control form-control-sm" step="0.01" placeholder="Valor" value="100.00">
+                            </div>
+                            <div class="col-6">
+                                <input type="date" id="data" class="form-control form-control-sm" value="2025-12-05">
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" id="descricao" class="form-control form-control-sm" placeholder="Descrição" value="Demo">
+                        </div>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-success btn-sm" onclick="addDemoTransaction()">Adicionar (Demo)</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card p-3">
+                    <h5>Gráfico de Despesas Mensais</h5>
+                    <div id="graficoContainer" style="min-height:220px;">
+                        <canvas id="despesasChart" width="400" height="180"></canvas>
+                    </div>
+                    <div class="mt-2">
+                        <a href="https://github.com/GuCortes04/Controle-de-Gastos" class="btn btn-sm btn-outline-primary">📂 Ver no GitHub</a>
+                        <button class="btn btn-sm btn-outline-secondary ms-2" onclick="downloadCSV()">📥 Baixar CSV</button>
+                    </div>
+                </div>
+
+                <div class="card p-3 mt-3">
+                    <h5>Transações</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Categoria</th>
+                                    <th class="text-end">Valor</th>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsBody">
+                                <tr>
+                                    <td><span class="badge bg-success">Receita</span></td>
+                                    <td>Salário</td>
+                                    <td class="text-end">R$ 2.000,00</td>
+                                    <td>2025-09-01</td>
+                                    <td>Salário mensal</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-danger">Despesa</span></td>
+                                    <td>Alimentação</td>
+                                    <td class="text-end">R$ 250,00</td>
+                                    <td>2025-09-15</td>
+                                    <td>Supermercado</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-danger">Despesa</span></td>
+                                    <td>Moradia</td>
+                                    <td class="text-end">R$ 180,00</td>
+                                    <td>2025-09-10</td>
+                                    <td>Internet</td>
+                                </tr>
+                                <tr>
+                                    <td><span class="badge bg-danger">Despesa</span></span>
+                                    <td>Transporte</td>
+                                    <td class="text-end">R$ 220,00</td>
+                                    <td>2025-10-03</td>
+                                    <td>Combustível</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning mt-3">
+                    <h6 class="mb-2">ℹ️ Sobre esta Demo</h6>
+                    <p class="mb-0 small">
+                        Esta é uma <strong>versão demo estática</strong> com dados de exemplo. O projeto completo com backend Flask, 
+                        banco de dados SQLite, Machine Learning e funcionalidades interativas está disponível no 
+                        <a href="https://github.com/GuCortes04/Controle-de-Gastos" target="_blank">repositório GitHub</a>.
+                    </p>
+                    <p class="mb-0 small mt-2">
+                        <strong>Para usar a versão completa localmente:</strong><br>
+                        <code>git clone https://github.com/GuCortes04/Controle-de-Gastos.git</code><br>
+                        <code>cd Controle-de-Gastos && python app.py</code><br>
+                        Depois acesse: <a href="http://127.0.0.1:5000" target="_blank">http://127.0.0.1:5000</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    function formatBRL(v){
+        const n = Number(v) || 0;
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
+    }
+
+    function animateCounter(el, to){
+        const start = 0;
+        const duration = 700;
+        const startTime = performance.now();
+        function step(now){
+            const t = Math.min((now - startTime) / duration, 1);
+            const eased = 1 - (1 - t) * (1 - t);
+            const value = start + (to - start) * eased;
+            el.textContent = formatBRL(value);
+            if(t < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+        // Animate counters
+        document.querySelectorAll('.counter').forEach(function(el){
+            const to = parseFloat(el.getAttribute('data-value')) || 0;
+            animateCounter(el, to);
+        });
+
+        // Create chart
+        const ctx = document.getElementById('despesasChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Setembro', 'Outubro'],
+                datasets: [{
+                    label: 'Despesas (R$)',
+                    data: [430, 220],
+                    backgroundColor: 'rgba(255,99,132,0.2)',
+                    borderColor: 'rgba(255,99,132,1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    });
+
+    function addDemoTransaction(){
+        alert('✨ Demo estática!\n\nPara adicionar transações reais, execute o projeto localmente:\npython app.py');
+    }
+
+    function downloadCSV(){
+        const csv = 'tipo,categoria,valor,data,descricao\n' +
+                    'Receita,Salário,2000.00,2025-09-01,Salário mensal\n' +
+                    'Despesa,Alimentação,250.00,2025-09-15,Supermercado\n' +
+                    'Despesa,Moradia,180.00,2025-09-10,Internet\n' +
+                    'Despesa,Transporte,220.00,2025-10-03,Combustível';
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'transacoes_demo.csv';
+        a.click();
+    }
+    </script>
+</body>
+</html>
