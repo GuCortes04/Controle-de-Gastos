@@ -294,10 +294,25 @@
         document.querySelectorAll('[data-view]').forEach(a=>a.addEventListener('click', function(e){e.preventDefault(); const v=this.getAttribute('data-view'); location.hash=v; showView(v);}));
         window.addEventListener('hashchange', ()=>{ showView(location.hash.replace('#','')||'home'); });
         showView(location.hash.replace('#','')||'home');
-        const btn = document.getElementById('gerarPrevisao'); if(btn){ btn.addEventListener('click', ()=>{
-            const despesas = transacoes.filter(t=>t.tipo==='Despesa').map(t=>t.valor||0);
-            const avg = despesas.length ? (despesas.reduce((s,v)=>s+v,0)/despesas.length) : 0;
-            document.getElementById('previsoesContent').innerHTML = `<p>Previsão despesas prox. mês: ${formatBRL(avg)}</p>`;
+        const btn = document.getElementById('gerarPrevisao'); if(btn){ btn.addEventListener('click', async ()=>{
+            const container = document.getElementById('previsoesContent');
+            container.innerHTML = '<div class="spinner-border spinner-border-sm me-2" role="status"></div><span>Gerando previsão...</span>';
+            // Try backend ML endpoints (if user later enables backend). If not available, fallback to client average.
+            const endpoints = ['/api/ml/previsao','/ml/previsao','/previsao'];
+            let prediction = null;
+            for(const e of endpoints){
+                try{
+                    const res = await fetch(e, {cache:'no-store'});
+                    if(res && res.ok){ const data = await res.json(); if(data && (data.previsao||data.predicao||data.value||data.valor)){ prediction = data.previsao||data.predicao||data.value||data.valor; break; } if(data && data.predictions && data.predictions.length){ prediction = data.predictions[0]; break; } }
+                }catch(err){ /* continue to next */ }
+            }
+            if(prediction === null){
+                const despesas = transacoes.filter(t=>t.tipo==='Despesa').map(t=>t.valor||0);
+                const avg = despesas.length ? (despesas.reduce((s,v)=>s+v,0)/despesas.length) : 0;
+                container.innerHTML = `<p>Previsão (fallback): ${formatBRL(avg)}</p>`;
+            } else {
+                container.innerHTML = `<p>Previsão (modelo): ${formatBRL(Number(prediction))}</p>`;
+            }
         }); }
     });
     </script>

@@ -446,14 +446,39 @@
         const initial = location.hash.replace('#','') || 'home';
         showView(initial);
 
-        // gerar previsao simple
+        // gerar previsao: try backend ML endpoint, otherwise fallback to client-side average
         const btn = document.getElementById('gerarPrevisao');
-        if(btn){ btn.addEventListener('click', function(){
+        if(btn){ btn.addEventListener('click', async function(){
+            const container = document.getElementById('previsoesContent');
+            container.innerHTML = '<div class="spinner-border spinner-border-sm me-2" role="status"></div><span>Gerando previsão...</span>';
             const txs = window._loadedTransactions || [];
-            const despesas = txs.filter(t=>t.tipo==='Despesa').map(t=>t.valor||0);
-            const avg = despesas.length ? (despesas.reduce((s,v)=>s+v,0)/despesas.length) : 0;
-            const msg = `Previsão de despesas próximo mês: ${formatBRL(avg.toFixed(2))}`;
-            const el = document.getElementById('previsoesContent'); el.innerHTML = `<p>${msg}</p>`;
+            // try backend endpoints in order
+            const endpoints = [FLASK_ORIGIN + '/api/ml/previsao', FLASK_ORIGIN + '/ml/previsao', FLASK_ORIGIN + '/previsao'];
+            let result = null;
+            for(const ep of endpoints){
+                try{
+                    const res = await fetch(ep, { method: 'GET', cache: 'no-store' });
+                    if(res && res.ok){
+                        const data = await res.json();
+                        if(data && (data.previsao || data.predicao || data.value || data.valor)){
+                            // normalize
+                            result = data.previsao || data.predicao || data.value || data.valor;
+                            break;
+                        }
+                        // if API returns structure {predictions: ...}
+                        if(data && data.predictions && data.predictions.length){ result = data.predictions[0]; break; }
+                    }
+                }catch(e){ /* ignore and continue */ }
+            }
+
+            if(result === null){
+                // fallback: simple average of past despesas
+                const despesas = txs.filter(t=>t.tipo==='Despesa').map(t=>Number(t.valor)||0);
+                const avg = despesas.length ? (despesas.reduce((s,v)=>s+v,0)/despesas.length) : 0;
+                container.innerHTML = `<p>Previsão de despesas (fallback): <strong>${formatBRL(avg)}</strong></p>`;
+            } else {
+                container.innerHTML = `<p>Previsão de despesas (modelo): <strong>${formatBRL(Number(result))}</strong></p>`;
+            }
         }); }
     });
     </script>
