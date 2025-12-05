@@ -1,1 +1,4 @@
 theme: jekyll-theme-minimal
+publish_dir: .
+include: [".nojekyll"]
+exclude: ["README.md"]
