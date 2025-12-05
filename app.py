@@ -25,9 +25,38 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+# Helper: formatar números para moeda brasileira (R$ 1.234,56)
+def format_brl(value):
+    try:
+        v = float(value or 0)
+    except Exception:
+        try:
+            # attempt to coerce strings with comma decimal
+            v = float(str(value).replace('.', '').replace(',', '.'))
+        except Exception:
+            v = 0.0
+    # Python's format uses ',' as thousands sep and '.' as decimal; swap for BRL
+    s = f"{v:,.2f}"
+    # swap thousand and decimal separators: '1,234.56' -> '1.234,56'
+    s = s.replace(',', 'X').replace('.', ',').replace('X', '.')
+    return f"R$ {s}"
+
+# register filter
+app.jinja_env.filters['brl'] = format_brl
+
+
 @app.before_request
 def log_request_info():
     logger.info("Request: %s %s", request.method, request.path)
+
+
+@app.after_request
+def add_cors_headers(response):
+    # Allow local dev tools (Live Server) to fetch JSON endpoints from Flask.
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+    return response
 
 # ------------------------------
 # MODELO DO BANCO DE DADOS
@@ -168,23 +197,37 @@ def index():
 # ------------------------------
 # ADICIONAR TRANSAÇÃO
 # ------------------------------
-@app.route('/adicionar', methods=['POST'])
+@app.route("/adicionar", methods=["GET", "POST"])
 def adicionar():
-    tipo = request.form['tipo']
-    categoria = request.form.get('categoria', '').strip()
-    valor = float(request.form['valor'])
-    data = datetime.strptime(request.form['data'], '%Y-%m-%d')
-    descricao = request.form['descricao']
+    # Accept GET to avoid HTTP 405 if the browser navigates to /adicionar.
+    if request.method == 'GET':
+        return redirect(url_for('index'))
 
-    # Se a categoria não for informada, tente classificar automaticamente
-    if not categoria:
-        categoria = classify_categoria(descricao)
+    tipo = request.form.get('tipo')
+    categoria = request.form.get('categoria') or "Sem categoria"
+    try:
+        valor = float(request.form.get('valor') or 0)
+    except Exception:
+        valor = 0.0
+    data_raw = request.form.get('data')
+    try:
+        data = datetime.strptime(data_raw, "%Y-%m-%d") if data_raw else datetime.utcnow()
+    except Exception:
+        data = datetime.utcnow()
+    descricao = request.form.get('descricao') or ''
 
-    nova = Transacao(tipo, categoria, valor, data, descricao)
+    nova = Transacao(
+        tipo=tipo,
+        categoria=categoria,
+        valor=valor,
+        data=data,
+        descricao=descricao
+    )
+
     db.session.add(nova)
     db.session.commit()
 
-    return redirect(url_for('index'))
+    return redirect("/")
 
 # ------------------------------
 # EXCLUIR TRANSAÇÃO
@@ -280,6 +323,23 @@ def debug_stats():
     ultimas = Transacao.query.order_by(Transacao.data.desc()).limit(5).all()
     ult = [{'id': t.id, 'tipo': t.tipo, 'categoria': t.categoria, 'valor': t.valor, 'data': t.data.strftime('%Y-%m-%d'), 'descricao': t.descricao} for t in ultimas]
     return jsonify({'total': total, 'receitas': receitas, 'despesas': despesas, 'ultimas': ult})
+
+
+@app.route('/transacoes_json')
+def transacoes_json():
+    """Retorna todas as transações em JSON (para carregamento no frontend)."""
+    transacoes = Transacao.query.order_by(Transacao.data.desc()).all()
+    out = []
+    for t in transacoes:
+        out.append({
+            'id': t.id,
+            'tipo': t.tipo,
+            'categoria': t.categoria,
+            'valor': t.valor,
+            'data': t.data.strftime('%Y-%m-%d') if t.data else None,
+            'descricao': t.descricao
+        })
+    return jsonify({'transacoes': out})
 
 
 # ------------------------------

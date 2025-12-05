@@ -10,19 +10,6 @@
     </style>
 </head>
 <body class="bg-light">
-    <script>
-    (async function(){
-        try{
-            const res = await fetch('http://127.0.0.1:5000/health', {cache: 'no-store'});
-            if(res && res.ok){
-                if(!location.href.startsWith('http://127.0.0.1:5000')){
-                    const target = 'http://127.0.0.1:5000' + location.pathname + location.search + location.hash;
-                    location.href = target;
-                }
-            }
-        }catch(e){ }
-    })();
-    </script>
     <div class="container mt-4">
         <h1 class="text-center">💰 Controle de Gastos Pessoais</h1>
 
@@ -30,15 +17,14 @@
             <div class="col-md-4">
                 <div class="card p-3">
                     <h5>Resumo Financeiro</h5>
-                    <p><strong>Receitas:</strong> <span class="counter" data-value="{{ receitas or 0 }}">{{ receitas | brl }}</span></p>
-                    <p><strong>Despesas:</strong> <span class="counter" data-value="{{ despesas or 0 }}">{{ despesas | brl }}</span></p>
-                    <p><strong>Saldo:</strong> <span class="counter" data-value="{{ saldo or 0 }}">{{ saldo | brl }}</span></p>
-
+                    <p><strong>Receitas:</strong> R$ 0,00</p>
+                    <p><strong>Despesas:</strong> R$ 400,00</p>
+                    <p><strong>Saldo:</strong> R$ -400,00</p>
                 </div>
 
                 <div class="card p-3 mt-3">
                     <h5>Nova Transação</h5>
-                    <form method="POST" action="http://127.0.0.1:5000/adicionar">
+                    <form method="POST" action="/adicionar">
                         <div class="mb-2">
                             <select name="tipo" class="form-select form-select-sm" required>
                                 <option value="Receita">Receita</option>
@@ -99,16 +85,33 @@
                                     <th>Ações</th>
                                 </tr>
                             </thead>
-                            <tbody id="transactionsBody">
-                                <!-- Server-side rendering removed: populate this tbody via client-side JS or leave empty. -->
-                            </tbody>
-                            <noscript>
-                                <tbody>
+                            <tbody>
+                                
+                                    
                                     <tr>
-                                        <td colspan="6" class="text-center text-muted">Ative JavaScript para visualizar as transações.</td>
+                                        <td>Despesa</td>
+                                        <td>Gás</td>
+                                        <td class="text-end">R$ 220,00</td>
+                                        <td>16/10/2025</td>
+                                        <td>Pago</td>
+                                        <td>
+                                            <a href="/excluir/2" class="btn btn-danger btn-sm">Excluir</a>
+                                        </td>
                                     </tr>
-                                </tbody>
-                            </noscript>
+                                    
+                                    <tr>
+                                        <td>Despesa</td>
+                                        <td>Internet</td>
+                                        <td class="text-end">R$ 180,00</td>
+                                        <td>18/09/2025</td>
+                                        <td>Pago</td>
+                                        <td>
+                                            <a href="/excluir/1" class="btn btn-danger btn-sm">Excluir</a>
+                                        </td>
+                                    </tr>
+                                    
+                                
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -159,34 +162,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', carregarGrafico);
-    </script>
-    <script>
-    // Format number to BRL (R$ 1.234,56)
-    function formatBRL(v){
-        const n = Number(v) || 0;
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
-    }
-
-    function animateCounter(el, to){
-        const start = 0;
-        const duration = 700;
-        const startTime = performance.now();
-        function step(now){
-            const t = Math.min((now - startTime) / duration, 1);
-            const eased = 1 - (1 - t) * (1 - t);
-            const value = start + (to - start) * eased;
-            el.textContent = formatBRL(value);
-            if(t < 1) requestAnimationFrame(step);
-        }
-        requestAnimationFrame(step);
-    }
-
-    document.addEventListener('DOMContentLoaded', function(){
-        document.querySelectorAll('.counter').forEach(function(el){
-            const to = parseFloat(el.getAttribute('data-value')) || 0;
-            animateCounter(el, to);
-        });
-    });
     </script>
     </body>
 </html>
