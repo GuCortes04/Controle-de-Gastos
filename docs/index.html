@@ -17,70 +17,46 @@
             <div class="col-md-4">
                 <div class="card p-3">
                     <h5>Resumo Financeiro</h5>
-                    <p><strong>Receitas:</strong> <span class="counter" id="receitas" data-value="0">R$ 0,00</span></p>
-                    <p><strong>Despesas:</strong> <span class="counter" id="despesas" data-value="0">R$ 0,00</span></p>
-                    <p><strong>Saldo:</strong> <span class="counter" id="saldo" data-value="0">R$ 0,00</span></p>
+                    <p><strong>Receitas:</strong> <span class="counter" id="receitas">R$ 0,00</span></p>
+                    <p><strong>Despesas:</strong> <span class="counter" id="despesas">R$ 0,00</span></p>
+                    <p><strong>Saldo:</strong> <span class="counter" id="saldo">R$ 0,00</span></p>
                 </div>
 
                 <div class="card p-3 mt-3">
                     <h5>Nova Transação</h5>
                     <form id="newTxForm">
                         <div class="mb-2">
-                            <select name="tipo" id="tipo" class="form-select form-select-sm" required>
+                            <select name="tipo" class="form-select form-select-sm" required>
                                 <option value="Receita">Receita</option>
                                 <option value="Despesa">Despesa</option>
                             </select>
                         </div>
                         <div class="mb-2">
-                            <input type="text" name="categoria" id="categoria" class="form-control form-control-sm" placeholder="Categoria (opcional - deixe vazio para auto)">
+                            <input type="text" name="categoria" class="form-control form-control-sm" placeholder="Categoria">
                         </div>
                         <div class="mb-2 row">
                             <div class="col-6">
-                                <input type="number" name="valor" id="valor" class="form-control form-control-sm" step="0.01" placeholder="Valor" required>
+                                <input type="number" name="valor" class="form-control form-control-sm" step="0.01" placeholder="Valor" required>
                             </div>
                             <div class="col-6">
-                                <input type="date" name="data" id="data" class="form-control form-control-sm" required>
+                                <input type="date" name="data" class="form-control form-control-sm" required>
                             </div>
                         </div>
                         <div class="mb-2">
-                            <input type="text" name="descricao" id="descricao" class="form-control form-control-sm" placeholder="Descrição">
+                            <input type="text" name="descricao" class="form-control form-control-sm" placeholder="Descrição">
                         </div>
                         <div class="text-end">
                             <button type="submit" class="btn btn-success btn-sm">Adicionar</button>
                         </div>
                     </form>
-                    <div class="mt-3" id="pendingSection" style="display:none;">
-                        <h6>Transações pendentes</h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-bordered mb-2" id="pendingTable">
-                                <thead class="table-light">
-                                    <tr><th>Tipo</th><th>Categoria</th><th class="text-end">Valor</th><th>Data</th><th>Descrição</th><th>Ações</th></tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                        <div class="text-end">
-                            <button id="sendAllBtn" class="btn btn-primary btn-sm me-2">Enviar tudo</button>
-                            <button id="clearPendingBtn" class="btn btn-outline-secondary btn-sm">Limpar</button>
-                        </div>
-                    </div>
                 </div>
             </div>
 
             <div class="col-md-8">
                 <div class="card p-3">
                     <h5>Gráfico de Despesas Mensais</h5>
-                    <div id="graficoContainer" style="min-height:220px;">
+                    <div style="min-height:220px;">
                         <canvas id="despesasChart" width="400" height="180"></canvas>
-                        <div id="graficoMensagem" class="text-center text-muted mt-2" style="display:none;">Nenhuma despesa para mostrar.</div>
-                    </div>
-                    <div class="mt-2">
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="inserirExemplo()">Inserir dados de exemplo</button>
-                        <button onclick="exportarCSV()" class="btn btn-sm btn-outline-success ms-2">Exportar CSV</button>
-                        <form id="importForm" enctype="multipart/form-data" class="d-inline ms-2">
-                            <input type="file" name="file" id="fileInput" accept="text/csv" style="display:inline-block;" required>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="importarCSV()">Importar CSV</button>
-                        </form>
                     </div>
                 </div>
 
@@ -99,9 +75,6 @@
                                 </tr>
                             </thead>
                             <tbody id="transactionsBody">
-                                <tr>
-                                    <td colspan="6" class="text-center text-muted">Carregando transações...</td>
-                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -112,16 +85,13 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-    let BACKEND_URL = 'http://127.0.0.1:5000';
-    const pending = [];
-
-    async function detectBackend(){
-        try{
-            const res = await fetch(BACKEND_URL + '/health', { cache: 'no-store' });
-            if(res.ok) return BACKEND_URL;
-        } catch(e) {}
-        return BACKEND_URL;
-    }
+    // ===== DADOS EM MEMÓRIA =====
+    let transacoes = [
+        { id: 1, tipo: 'Receita', categoria: 'Salário', valor: 3000, data: '2025-12-05', descricao: 'Salário mensal' },
+        { id: 2, tipo: 'Despesa', categoria: 'Aluguel', valor: 1000, data: '2025-12-20', descricao: 'Aluguel' }
+    ];
+    let nextId = 3;
+    let chart = null;
 
     function formatBRL(v){
         const n = Number(v) || 0;
@@ -142,187 +112,100 @@
         requestAnimationFrame(step);
     }
 
-    function createCell(text, cls){ 
-        const td = document.createElement('td'); 
-        if(cls) td.className = cls; 
-        td.textContent = text; 
-        return td; 
+    function atualizarResumo(){
+        const receitas = transacoes.filter(t => t.tipo === 'Receita').reduce((sum, t) => sum + t.valor, 0);
+        const despesas = transacoes.filter(t => t.tipo === 'Despesa').reduce((sum, t) => sum + t.valor, 0);
+        const saldo = receitas - despesas;
+
+        animateCounter(document.getElementById('receitas'), receitas);
+        animateCounter(document.getElementById('despesas'), despesas);
+        animateCounter(document.getElementById('saldo'), saldo);
     }
 
-    async function carregarDados(){
-        try{
-            const backend = await detectBackend();
-            const txRes = await fetch(backend + '/transacoes_json');
-            const txData = await txRes.json();
-            
-            if(txData && txData.transacoes){
-                const transacoes = txData.transacoes;
-                const receitas = transacoes.filter(t => t.tipo === 'Receita').reduce((sum, t) => sum + (t.valor || 0), 0);
-                const despesas = transacoes.filter(t => t.tipo === 'Despesa').reduce((sum, t) => sum + (t.valor || 0), 0);
-                const saldo = receitas - despesas;
-                
-                document.getElementById('receitas').setAttribute('data-value', receitas);
-                document.getElementById('despesas').setAttribute('data-value', despesas);
-                document.getElementById('saldo').setAttribute('data-value', saldo);
-                
-                document.querySelectorAll('.counter').forEach(el => {
-                    const to = parseFloat(el.getAttribute('data-value')) || 0;
-                    animateCounter(el, to);
-                });
-                
-                const tbody = document.getElementById('transactionsBody');
-                tbody.innerHTML = '';
-                if(transacoes.length === 0){
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhuma transação registrada.</td></tr>';
-                } else {
-                    transacoes.forEach(t => {
-                        const tr = document.createElement('tr');
-                        tr.appendChild(createCell(t.tipo));
-                        tr.appendChild(createCell(t.categoria || ''));
-                        tr.appendChild(createCell(formatBRL(t.valor), 'text-end'));
-                        tr.appendChild(createCell(t.data || ''));
-                        tr.appendChild(createCell(t.descricao || ''));
-                        
-                        const tdActions = document.createElement('td');
-                        const a = document.createElement('a');
-                        a.href = backend + '/excluir/' + t.id;
-                        a.className = 'btn btn-danger btn-sm';
-                        a.textContent = 'Excluir';
-                        a.onclick = function(e){ 
-                            e.preventDefault();
-                            if(confirm('Confirma exclusão?')) location.href = this.href;
-                        };
-                        tdActions.appendChild(a);
-                        tr.appendChild(tdActions);
-                        tbody.appendChild(tr);
-                    });
-                }
-            }
-        } catch(e){
-            console.error('Erro ao carregar dados:', e);
-            document.getElementById('transactionsBody').innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro: Backend não disponível</td></tr>';
-        }
-    }
-
-    async function carregarGrafico(){
-        try{
-            const backend = await detectBackend();
-            const res = await fetch(backend + '/dados_despesas');
-            const data = await res.json();
-            
-            if(!data || !data.meses || data.meses.length === 0){
-                document.getElementById('despesasChart').style.display = 'none';
-                document.getElementById('graficoMensagem').style.display = 'block';
-                return;
-            }
-            
-            const ctx = document.getElementById('despesasChart').getContext('2d');
-            document.getElementById('despesasChart').style.display = 'block';
-            document.getElementById('graficoMensagem').style.display = 'none';
-            
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: data.meses,
-                    datasets: [{
-                        label: 'Despesas (R$)',
-                        data: data.valores,
-                        backgroundColor: 'rgba(255,99,132,0.2)',
-                        borderColor: 'rgba(255,99,132,1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
-        } catch(e){
-            console.error('Erro ao carregar gráfico:', e);
-            document.getElementById('despesasChart').style.display = 'none';
-            document.getElementById('graficoMensagem').style.display = 'block';
-            document.getElementById('graficoMensagem').textContent = 'Backend não disponível.';
-        }
-    }
-
-    function renderPending(){
-        const tbody = document.querySelector('#pendingTable tbody');
-        const section = document.getElementById('pendingSection');
+    function renderTransacoes(){
+        const tbody = document.getElementById('transactionsBody');
         tbody.innerHTML = '';
-        if(pending.length === 0){ 
-            section.style.display = 'none'; 
-            return; 
+        if(transacoes.length === 0){
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhuma transação.</td></tr>';
+            return;
         }
-        section.style.display = 'block';
-        pending.forEach((t, i) => {
+        transacoes.forEach(t => {
             const tr = document.createElement('tr');
-            tr.appendChild(createCell(t.tipo));
-            tr.appendChild(createCell(t.categoria));
-            tr.appendChild(createCell(formatBRL(t.valor), 'text-end'));
-            tr.appendChild(createCell(t.data));
-            tr.appendChild(createCell(t.descricao));
-            const td = document.createElement('td');
-            const btn = document.createElement('button');
-            btn.className = 'btn btn-sm btn-outline-danger';
-            btn.textContent = 'Remover';
-            btn.type = 'button';
-            btn.onclick = () => { pending.splice(i, 1); renderPending(); };
-            td.appendChild(btn);
-            tr.appendChild(td);
+            tr.innerHTML = `
+                <td>${t.tipo}</td>
+                <td>${t.categoria}</td>
+                <td class="text-end">${formatBRL(t.valor)}</td>
+                <td>${t.data}</td>
+                <td>${t.descricao}</td>
+                <td><button class="btn btn-danger btn-sm" onclick="excluirTransacao(${t.id})">Excluir</button></td>
+            `;
             tbody.appendChild(tr);
         });
     }
 
-    async function enviarPendentes(){
-        if(pending.length === 0) return;
-        document.getElementById('sendAllBtn').disabled = true;
-        try{
-            const backend = await detectBackend();
-            for(const tx of pending.slice()){
-                const fd = new FormData();
-                fd.append('tipo', tx.tipo);
-                fd.append('categoria', tx.categoria);
-                fd.append('valor', tx.valor);
-                fd.append('data', tx.data);
-                fd.append('descricao', tx.descricao);
-                await fetch(backend + '/adicionar', { method: 'POST', body: fd, mode: 'cors' });
+    function atualizarGrafico(){
+        const despesasPorMes = {};
+        transacoes.filter(t => t.tipo === 'Despesa').forEach(t => {
+            const mes = t.data.substring(0, 7);
+            despesasPorMes[mes] = (despesasPorMes[mes] || 0) + t.valor;
+        });
+
+        const meses = Object.keys(despesasPorMes).sort();
+        const valores = meses.map(m => despesasPorMes[m]);
+
+        const ctx = document.getElementById('despesasChart').getContext('2d');
+        if(chart) chart.destroy();
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: meses,
+                datasets: [{
+                    label: 'Despesas (R$)',
+                    data: valores,
+                    backgroundColor: 'rgba(255,99,132,0.2)',
+                    borderColor: 'rgba(255,99,132,1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } }
             }
-            location.reload();
-        } catch(e){
-            console.error('Erro:', e);
-            alert('Erro ao enviar transações');
-            document.getElementById('sendAllBtn').disabled = false;
+        });
+    }
+
+    function excluirTransacao(id){
+        if(confirm('Confirma exclusão?')){
+            transacoes = transacoes.filter(t => t.id !== id);
+            renderTransacoes();
+            atualizarResumo();
+            atualizarGrafico();
         }
     }
 
-    function inserirExemplo(){ alert('Use backend local: python app.py'); }
-    function exportarCSV(){ alert('Use backend local em http://127.0.0.1:5000/exportar_csv'); }
-    function importarCSV(){ alert('Use backend local'); }
+    document.getElementById('newTxForm').addEventListener('submit', function(e){
+        e.preventDefault();
+        const fd = new FormData(this);
+        const nova = {
+            id: nextId++,
+            tipo: fd.get('tipo'),
+            categoria: fd.get('categoria') || 'Sem categoria',
+            valor: parseFloat(fd.get('valor')) || 0,
+            data: fd.get('data'),
+            descricao: fd.get('descricao')
+        };
+        transacoes.push(nova);
+        this.reset();
+        renderTransacoes();
+        atualizarResumo();
+        atualizarGrafico();
+    });
 
-    document.addEventListener('DOMContentLoaded', () => {
-        carregarDados();
-        carregarGrafico();
-        
-        document.getElementById('newTxForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const fd = new FormData(e.target);
-            pending.push({
-                tipo: fd.get('tipo'),
-                categoria: fd.get('categoria') || 'Sem categoria',
-                valor: parseFloat(fd.get('valor')) || 0,
-                data: fd.get('data'),
-                descricao: fd.get('descricao')
-            });
-            renderPending();
-            e.target.reset();
-        });
-        
-        document.getElementById('sendAllBtn').addEventListener('click', enviarPendentes);
-        document.getElementById('clearPendingBtn').addEventListener('click', () => {
-            pending.length = 0;
-            renderPending();
-        });
+    document.addEventListener('DOMContentLoaded', function(){
+        renderTransacoes();
+        atualizarResumo();
+        atualizarGrafico();
     });
     </script>
 </body>
