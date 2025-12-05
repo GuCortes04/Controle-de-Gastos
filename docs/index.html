@@ -11,6 +11,23 @@
 </head>
 <body class="bg-light">
     <div class="container mt-4">
+        <nav class="navbar navbar-expand-lg navbar-light bg-white rounded p-2 mb-3">
+            <div class="container-fluid px-0">
+                <a class="navbar-brand ms-2" href="#" data-view="home">💰 Controle de Gastos</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="mainNav">
+                    <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                        <li class="nav-item"><a class="nav-link active" href="#home" data-view="home">Home</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#relatorios" data-view="relatorios">Relatórios</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#previsoes" data-view="previsoes">Previsões</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div id="view-home">
         <h1 class="text-center">💰 Controle de Gastos Pessoais</h1>
 
         <div class="row mt-4">
@@ -82,6 +99,49 @@
             </div>
         </div>
     </div>
+
+        </div> <!-- /view-home -->
+
+        <!-- Relatórios view -->
+        <div id="view-relatorios" style="display:none;">
+            <div class="container mt-4">
+                <h2>📊 Relatórios</h2>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card p-3 mb-3">
+                            <h6>Gastos por Categoria (exemplo)</h6>
+                            <canvas id="relatoriosChart" style="min-height:200px;"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card p-3 mb-3">
+                            <h6>Resumo Rápido</h6>
+                            <p><strong>Total Receitas:</strong> <span id="rel_rec" class="monospace">R$ 0,00</span></p>
+                            <p><strong>Total Despesas:</strong> <span id="rel_desp" class="monospace">R$ 0,00</span></p>
+                            <p><strong>Saldo:</strong> <span id="rel_saldo" class="monospace">R$ 0,00</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Previsões view -->
+        <div id="view-previsoes" style="display:none;">
+            <div class="container mt-4">
+                <h2>🤖 Previsões</h2>
+                <div class="card p-3">
+                    <p>Previsões de gastos com base no histórico (exemplo estático).</p>
+                    <div id="previsoesContent">
+                        <p class="text-muted">Nenhuma previsão gerada ainda.</p>
+                        <button id="gerarPrevisao" class="btn btn-primary btn-sm">Gerar Previsão</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="bg-white text-center mt-4 py-3 border-top">
+            <div class="container"><small>Desenvolvido por Gustavo Cortes</small></div>
+        </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
@@ -206,6 +266,39 @@
         renderTransacoes();
         atualizarResumo();
         atualizarGrafico();
+    });
+    </script>
+    <script>
+    // SPA router for static docs page
+    function showView(view){
+        ['home','relatorios','previsoes'].forEach(v=>{
+            const el = document.getElementById('view-'+v);
+            if(el) el.style.display = (v===view)?'':'none';
+            const link = document.querySelector('[data-view="'+v+'"]'); if(link) link.classList.toggle('active', v===view);
+        });
+        if(view==='relatorios'){
+            try{
+                const receitas = transacoes.filter(t=>t.tipo==='Receita').reduce((s,t)=>s+(t.valor||0),0);
+                const despesas = transacoes.filter(t=>t.tipo==='Despesa').reduce((s,t)=>s+(t.valor||0),0);
+                document.getElementById('rel_rec').textContent = formatBRL(receitas);
+                document.getElementById('rel_desp').textContent = formatBRL(despesas);
+                document.getElementById('rel_saldo').textContent = formatBRL(receitas-despesas);
+                const cat={}; transacoes.filter(t=>t.tipo==='Despesa').forEach(t=>{cat[t.categoria]=(cat[t.categoria]||0)+t.valor});
+                const labels=Object.keys(cat); const data=labels.map(l=>cat[l]);
+                const ctx=document.getElementById('relatoriosChart').getContext('2d'); if(window._relChart) window._relChart.destroy();
+                window._relChart = new Chart(ctx, {type:'pie', data:{labels:labels, datasets:[{data:data, backgroundColor:labels.map((_,i)=>`hsl(${i*60%360} 70% 70%)`)}]}});
+            }catch(e){console.error(e)}
+        }
+    }
+    document.addEventListener('DOMContentLoaded', function(){
+        document.querySelectorAll('[data-view]').forEach(a=>a.addEventListener('click', function(e){e.preventDefault(); const v=this.getAttribute('data-view'); location.hash=v; showView(v);}));
+        window.addEventListener('hashchange', ()=>{ showView(location.hash.replace('#','')||'home'); });
+        showView(location.hash.replace('#','')||'home');
+        const btn = document.getElementById('gerarPrevisao'); if(btn){ btn.addEventListener('click', ()=>{
+            const despesas = transacoes.filter(t=>t.tipo==='Despesa').map(t=>t.valor||0);
+            const avg = despesas.length ? (despesas.reduce((s,v)=>s+v,0)/despesas.length) : 0;
+            document.getElementById('previsoesContent').innerHTML = `<p>Previsão despesas prox. mês: ${formatBRL(avg)}</p>`;
+        }); }
     });
     </script>
 </body>
