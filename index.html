@@ -1,12 +1,212 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-br">
 <head>
-    <meta charset="utf-8">
-    <title>Controle de Gastos - Redirecting...</title>
-    <meta http-equiv="refresh" content="0; URL='https://gucortes04.github.io/Controle-de-Gastos/'">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Controle de Gastos Pessoais</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .monospace { font-family: monospace; }
+    </style>
 </head>
-<body>
-    <p>Redirecionando para a aplicação...</p>
-    <p><a href="https://gucortes04.github.io/Controle-de-Gastos/">Clique aqui se não redirecionar automaticamente</a></p>
+<body class="bg-light">
+    <div class="container mt-4">
+        <h1 class="text-center">💰 Controle de Gastos Pessoais</h1>
+
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card p-3">
+                    <h5>Resumo Financeiro</h5>
+                    <p><strong>Receitas:</strong> <span class="counter" id="receitas">R$ 0,00</span></p>
+                    <p><strong>Despesas:</strong> <span class="counter" id="despesas">R$ 0,00</span></p>
+                    <p><strong>Saldo:</strong> <span class="counter" id="saldo">R$ 0,00</span></p>
+                </div>
+
+                <div class="card p-3 mt-3">
+                    <h5>Nova Transação</h5>
+                    <form id="newTxForm">
+                        <div class="mb-2">
+                            <select name="tipo" class="form-select form-select-sm" required>
+                                <option value="Receita">Receita</option>
+                                <option value="Despesa">Despesa</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" name="categoria" class="form-control form-control-sm" placeholder="Categoria">
+                        </div>
+                        <div class="mb-2 row">
+                            <div class="col-6">
+                                <input type="number" name="valor" class="form-control form-control-sm" step="0.01" placeholder="Valor" required>
+                            </div>
+                            <div class="col-6">
+                                <input type="date" name="data" class="form-control form-control-sm" required>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" name="descricao" class="form-control form-control-sm" placeholder="Descrição">
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-success btn-sm">Adicionar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card p-3">
+                    <h5>Gráfico de Despesas Mensais</h5>
+                    <div style="min-height:220px;">
+                        <canvas id="despesasChart" width="400" height="180"></canvas>
+                    </div>
+                </div>
+
+                <div class="card p-3 mt-3">
+                    <h5>Transações</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Categoria</th>
+                                    <th class="text-end">Valor</th>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    // ===== DADOS EM MEMÓRIA =====
+    let transacoes = [
+        { id: 1, tipo: 'Receita', categoria: 'Salário', valor: 3000, data: '2025-12-05', descricao: 'Salário mensal' },
+        { id: 2, tipo: 'Despesa', categoria: 'Aluguel', valor: 1000, data: '2025-12-20', descricao: 'Aluguel' }
+    ];
+    let nextId = 3;
+    let chart = null;
+
+    function formatBRL(v){
+        const n = Number(v) || 0;
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
+    }
+
+    function animateCounter(el, to){
+        const start = 0;
+        const duration = 700;
+        const startTime = performance.now();
+        function step(now){
+            const t = Math.min((now - startTime) / duration, 1);
+            const eased = 1 - (1 - t) * (1 - t);
+            const value = start + (to - start) * eased;
+            el.textContent = formatBRL(value);
+            if(t < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+
+    function atualizarResumo(){
+        const receitas = transacoes.filter(t => t.tipo === 'Receita').reduce((sum, t) => sum + t.valor, 0);
+        const despesas = transacoes.filter(t => t.tipo === 'Despesa').reduce((sum, t) => sum + t.valor, 0);
+        const saldo = receitas - despesas;
+
+        animateCounter(document.getElementById('receitas'), receitas);
+        animateCounter(document.getElementById('despesas'), despesas);
+        animateCounter(document.getElementById('saldo'), saldo);
+    }
+
+    function renderTransacoes(){
+        const tbody = document.getElementById('transactionsBody');
+        tbody.innerHTML = '';
+        if(transacoes.length === 0){
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhuma transação.</td></tr>';
+            return;
+        }
+        transacoes.forEach(t => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${t.tipo}</td>
+                <td>${t.categoria}</td>
+                <td class="text-end">${formatBRL(t.valor)}</td>
+                <td>${t.data}</td>
+                <td>${t.descricao}</td>
+                <td><button class="btn btn-danger btn-sm" onclick="excluirTransacao(${t.id})">Excluir</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function atualizarGrafico(){
+        const despesasPorMes = {};
+        transacoes.filter(t => t.tipo === 'Despesa').forEach(t => {
+            const mes = t.data.substring(0, 7);
+            despesasPorMes[mes] = (despesasPorMes[mes] || 0) + t.valor;
+        });
+
+        const meses = Object.keys(despesasPorMes).sort();
+        const valores = meses.map(m => despesasPorMes[m]);
+
+        const ctx = document.getElementById('despesasChart').getContext('2d');
+        if(chart) chart.destroy();
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: meses,
+                datasets: [{
+                    label: 'Despesas (R$)',
+                    data: valores,
+                    backgroundColor: 'rgba(255,99,132,0.2)',
+                    borderColor: 'rgba(255,99,132,1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    function excluirTransacao(id){
+        if(confirm('Confirma exclusão?')){
+            transacoes = transacoes.filter(t => t.id !== id);
+            renderTransacoes();
+            atualizarResumo();
+            atualizarGrafico();
+        }
+    }
+
+    document.getElementById('newTxForm').addEventListener('submit', function(e){
+        e.preventDefault();
+        const fd = new FormData(this);
+        const nova = {
+            id: nextId++,
+            tipo: fd.get('tipo'),
+            categoria: fd.get('categoria') || 'Sem categoria',
+            valor: parseFloat(fd.get('valor')) || 0,
+            data: fd.get('data'),
+            descricao: fd.get('descricao')
+        };
+        transacoes.push(nova);
+        this.reset();
+        renderTransacoes();
+        atualizarResumo();
+        atualizarGrafico();
+    });
+
+    document.addEventListener('DOMContentLoaded', function(){
+        renderTransacoes();
+        atualizarResumo();
+        atualizarGrafico();
+    });
+    </script>
 </body>
 </html>
