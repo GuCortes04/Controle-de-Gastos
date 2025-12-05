@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Controle de Gastos Pessoais</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .monospace { font-family: monospace; }
+    </style>
+</head>
+<body class="bg-light">
+    <div class="container mt-4">
+        <nav class="navbar navbar-expand-lg navbar-light bg-white rounded p-2 mb-3">
+            <div class="container-fluid px-0">
+                <a class="navbar-brand ms-2" href="#" data-view="home">💰 Controle de Gastos</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="mainNav">
+                    <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                        <li class="nav-item"><a class="nav-link active" href="#home" data-view="home">Home</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#relatorios" data-view="relatorios">Relatórios</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#previsoes" data-view="previsoes">Previsões</a></li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+
+        <div id="view-home">
+        <h1 class="text-center">💰 Controle de Gastos Pessoais</h1>
+
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card p-3">
+                    <h5>Resumo Financeiro</h5>
+                    <p><strong>Receitas:</strong> <span class="counter" id="receitas">R$ 0,00</span></p>
+                    <p><strong>Despesas:</strong> <span class="counter" id="despesas">R$ 0,00</span></p>
+                    <p><strong>Saldo:</strong> <span class="counter" id="saldo">R$ 0,00</span></p>
+                </div>
+
+                <div class="card p-3 mt-3">
+                    <h5>Nova Transação</h5>
+                    <form id="newTxForm">
+                        <div class="mb-2">
+                            <select name="tipo" class="form-select form-select-sm" required>
+                                <option value="Receita">Receita</option>
+                                <option value="Despesa">Despesa</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" name="categoria" class="form-control form-control-sm" placeholder="Categoria">
+                        </div>
+                        <div class="mb-2 row">
+                            <div class="col-6">
+                                <input type="number" name="valor" class="form-control form-control-sm" step="0.01" placeholder="Valor" required>
+                            </div>
+                            <div class="col-6">
+                                <input type="date" name="data" class="form-control form-control-sm" required>
+                            </div>
+                        </div>
+                        <div class="mb-2">
+                            <input type="text" name="descricao" class="form-control form-control-sm" placeholder="Descrição">
+                        </div>
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-success btn-sm">Adicionar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card p-3">
+                    <h5>Gráfico de Despesas Mensais</h5>
+                    <div style="min-height:220px;">
+                        <canvas id="despesasChart" width="400" height="180"></canvas>
+                    </div>
+                </div>
+
+                <div class="card p-3 mt-3">
+                    <h5>Transações</h5>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-sm align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Tipo</th>
+                                    <th>Categoria</th>
+                                    <th class="text-end">Valor</th>
+                                    <th>Data</th>
+                                    <th>Descrição</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactionsBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+        </div> <!-- /view-home -->
+
+        <!-- Relatórios view -->
+        <div id="view-relatorios" style="display:none;">
+            <div class="container mt-4">
+                <h2>📊 Relatórios</h2>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card p-3 mb-3">
+                            <h6>Gastos por Categoria (exemplo)</h6>
+                            <canvas id="relatoriosChart" style="min-height:200px;"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card p-3 mb-3">
+                            <h6>Resumo Rápido</h6>
+                            <p><strong>Total Receitas:</strong> <span id="rel_rec" class="monospace">R$ 0,00</span></p>
+                            <p><strong>Total Despesas:</strong> <span id="rel_desp" class="monospace">R$ 0,00</span></p>
+                            <p><strong>Saldo:</strong> <span id="rel_saldo" class="monospace">R$ 0,00</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Previsões view -->
+        <div id="view-previsoes" style="display:none;">
+            <div class="container mt-4">
+                <h2>🤖 Previsões</h2>
+                <div class="card p-3">
+                    <p>Previsões de gastos com base no histórico (exemplo estático).</p>
+                    <div id="previsoesContent">
+                        <p class="text-muted">Nenhuma previsão gerada ainda.</p>
+                        <button id="gerarPrevisao" class="btn btn-primary btn-sm">Gerar Previsão</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="bg-white text-center mt-4 py-3 border-top">
+            <div class="container"><small>Desenvolvido por Gustavo Cortes</small></div>
+        </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    // ===== DADOS EM MEMÓRIA =====
+    let transacoes = [
+        { id: 1, tipo: 'Receita', categoria: 'Salário', valor: 3000, data: '2025-12-05', descricao: 'Salário mensal' },
+        { id: 2, tipo: 'Despesa', categoria: 'Aluguel', valor: 1000, data: '2025-12-20', descricao: 'Aluguel' }
+    ];
+    let nextId = 3;
+    let chart = null;
+
+    function formatBRL(v){
+        const n = Number(v) || 0;
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(n);
+    }
+
+    function animateCounter(el, to){
+        const start = 0;
+        const duration = 700;
+        const startTime = performance.now();
+        function step(now){
+            const t = Math.min((now - startTime) / duration, 1);
+            const eased = 1 - (1 - t) * (1 - t);
+            const value = start + (to - start) * eased;
+            el.textContent = formatBRL(value);
+            if(t < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+
+    function atualizarResumo(){
+        const receitas = transacoes.filter(t => t.tipo === 'Receita').reduce((sum, t) => sum + t.valor, 0);
+        const despesas = transacoes.filter(t => t.tipo === 'Despesa').reduce((sum, t) => sum + t.valor, 0);
+        const saldo = receitas - despesas;
+
+        animateCounter(document.getElementById('receitas'), receitas);
+        animateCounter(document.getElementById('despesas'), despesas);
+        animateCounter(document.getElementById('saldo'), saldo);
+    }
+
+    function renderTransacoes(){
+        const tbody = document.getElementById('transactionsBody');
+        tbody.innerHTML = '';
+        if(transacoes.length === 0){
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Nenhuma transação.</td></tr>';
+            return;
+        }
+        transacoes.forEach(t => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${t.tipo}</td>
+                <td>${t.categoria}</td>
+                <td class="text-end">${formatBRL(t.valor)}</td>
+                <td>${t.data}</td>
+                <td>${t.descricao}</td>
+                <td><button class="btn btn-danger btn-sm" onclick="excluirTransacao(${t.id})">Excluir</button></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function atualizarGrafico(){
+        const despesasPorMes = {};
+        transacoes.filter(t => t.tipo === 'Despesa').forEach(t => {
+            const mes = t.data.substring(0, 7);
+            despesasPorMes[mes] = (despesasPorMes[mes] || 0) + t.valor;
+        });
+
+        const meses = Object.keys(despesasPorMes).sort();
+        const valores = meses.map(m => despesasPorMes[m]);
+
+        const ctx = document.getElementById('despesasChart').getContext('2d');
+        if(chart) chart.destroy();
+        chart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: meses,
+                datasets: [{
+                    label: 'Despesas (R$)',
+                    data: valores,
+                    backgroundColor: 'rgba(255,99,132,0.2)',
+                    borderColor: 'rgba(255,99,132,1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+
+    function excluirTransacao(id){
+        if(confirm('Confirma exclusão?')){
+            transacoes = transacoes.filter(t => t.id !== id);
+            renderTransacoes();
+            atualizarResumo();
+            atualizarGrafico();
+        }
+    }
+
+    document.getElementById('newTxForm').addEventListener('submit', function(e){
+        e.preventDefault();
+        const fd = new FormData(this);
+        const nova = {
+            id: nextId++,
+            tipo: fd.get('tipo'),
+            categoria: fd.get('categoria') || 'Sem categoria',
+            valor: parseFloat(fd.get('valor')) || 0,
+            data: fd.get('data'),
+            descricao: fd.get('descricao')
+        };
+        transacoes.push(nova);
+        this.reset();
+        renderTransacoes();
+        atualizarResumo();
+        atualizarGrafico();
+    });
+
+    document.addEventListener('DOMContentLoaded', function(){
+        renderTransacoes();
+        atualizarResumo();
+        atualizarGrafico();
+    });
+    </script>
+    <script>
+    // SPA router for static docs page
+    function showView(view){
+        ['home','relatorios','previsoes'].forEach(v=>{
+            const el = document.getElementById('view-'+v);
+            if(el) el.style.display = (v===view)?'':'none';
+            const link = document.querySelector('[data-view="'+v+'"]'); if(link) link.classList.toggle('active', v===view);
+        });
+        if(view==='relatorios'){
+            try{
+                const receitas = transacoes.filter(t=>t.tipo==='Receita').reduce((s,t)=>s+(t.valor||0),0);
+                const despesas = transacoes.filter(t=>t.tipo==='Despesa').reduce((s,t)=>s+(t.valor||0),0);
+                document.getElementById('rel_rec').textContent = formatBRL(receitas);
+                document.getElementById('rel_desp').textContent = formatBRL(despesas);
+                document.getElementById('rel_saldo').textContent = formatBRL(receitas-despesas);
+                const cat={}; transacoes.filter(t=>t.tipo==='Despesa').forEach(t=>{cat[t.categoria]=(cat[t.categoria]||0)+t.valor});
+                const labels=Object.keys(cat); const data=labels.map(l=>cat[l]);
+                const ctx=document.getElementById('relatoriosChart').getContext('2d'); if(window._relChart) window._relChart.destroy();
+                window._relChart = new Chart(ctx, {type:'pie', data:{labels:labels, datasets:[{data:data, backgroundColor:labels.map((_,i)=>`hsl(${i*60%360} 70% 70%)`)}]}});
+            }catch(e){console.error(e)}
+        }
+    }
+    document.addEventListener('DOMContentLoaded', function(){
+        document.querySelectorAll('[data-view]').forEach(a=>a.addEventListener('click', function(e){e.preventDefault(); const v=this.getAttribute('data-view'); location.hash=v; showView(v);}));
+        window.addEventListener('hashchange', ()=>{ showView(location.hash.replace('#','')||'home'); });
+        showView(location.hash.replace('#','')||'home');
+        const btn = document.getElementById('gerarPrevisao'); if(btn){ btn.addEventListener('click', async ()=>{
+            const container = document.getElementById('previsoesContent');
+            container.innerHTML = '<div class="spinner-border spinner-border-sm me-2" role="status"></div><span>Gerando previsão...</span>';
+            // Try backend ML endpoints (if user later enables backend). If not available, fallback to client average.
+            const endpoints = ['/api/ml/previsao','/ml/previsao','/previsao'];
+            let prediction = null;
+            for(const e of endpoints){
+                try{
+                    const res = await fetch(e, {cache:'no-store'});
+                    if(res && res.ok){ const data = await res.json(); if(data && (data.previsao||data.predicao||data.value||data.valor)){ prediction = data.previsao||data.predicao||data.value||data.valor; break; } if(data && data.predictions && data.predictions.length){ prediction = data.predictions[0]; break; } }
+                }catch(err){ /* continue to next */ }
+            }
+            if(prediction === null){
+                const despesas = transacoes.filter(t=>t.tipo==='Despesa').map(t=>t.valor||0);
+                const avg = despesas.length ? (despesas.reduce((s,v)=>s+v,0)/despesas.length) : 0;
+                container.innerHTML = `<p>Previsão (fallback): ${formatBRL(avg)}</p>`;
+            } else {
+                container.innerHTML = `<p>Previsão (modelo): ${formatBRL(Number(prediction))}</p>`;
+            }
+        }); }
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+# GitHub Pages Configuration
+theme: jekyll-theme-minimal
+markdown: kramdown
+
+# Ensure HTML files are not processed as templates
+include:
+  - .nojekyll
+  - index.html
+
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+
+# Prevent Jekyll from processing HTML
+future: false
+show_drafts: false
