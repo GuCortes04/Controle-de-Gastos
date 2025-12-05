@@ -17,9 +17,10 @@
             <div class="col-md-4">
                 <div class="card p-3">
                     <h5>Resumo Financeiro</h5>
-                    <p><strong>Receitas:</strong> R$ {{ receitas or 0 }}</p>
-                    <p><strong>Despesas:</strong> R$ {{ despesas or 0 }}</p>
-                    <p><strong>Saldo:</strong> R$ {{ saldo or 0 }}</p>
+                    <p><strong>Receitas:</strong> {{ (receitas or 0) | float | round(2) }}</p>
+                    <p><strong>Despesas:</strong> {{ (despesas or 0) | float | round(2) }}</p>
+                    <p><strong>Saldo:</strong> {{ (saldo or 0) | float | round(2) }}</p>
+
                 </div>
 
                 <div class="card p-3 mt-3">
